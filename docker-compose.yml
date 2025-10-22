@@ -9,6 +9,7 @@ x-environment: &airflow_environment
   - AIRFLOW__CORE__STORE_SERIALIZED_DAGS=True
   - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
   - AIRFLOW__WEBSERVER__RBAC=False
+  - PYTHONPATH=/opt/airflow
 x-airflow-image: &airflow_image apache/airflow:2.0.0-python3.8
 # ====================================== /AIRFLOW ENVIRONMENT VARIABLES ======================================
 services:
@@ -35,6 +36,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
+      - ./dags:/opt/airflow/dags
+      - ./include:/opt/airflow/include
       - logs:/opt/airflow/logs
     environment: *airflow_environment
     command: webserver
@@ -45,6 +48,7 @@ services:
       - postgres
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./include:/opt/airflow/include
       - logs:/opt/airflow/logs
     environment: *airflow_environment
     command: scheduler
