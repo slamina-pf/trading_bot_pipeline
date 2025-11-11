@@ -4,31 +4,34 @@ x-environment: &airflow_environment
   - AIRFLOW__CORE__EXECUTOR=LocalExecutor
   - AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS=False
   - AIRFLOW__CORE__LOAD_EXAMPLES=False
-  - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql://airflow:airflow@postgres:5432/airflow
+  - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_DB_HOST}:${POSTGRES_DB_PORT}/${POSTGRES_DB}
   - AIRFLOW__CORE__STORE_DAG_CODE=True
   - AIRFLOW__CORE__STORE_SERIALIZED_DAGS=True
   - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
   - AIRFLOW__WEBSERVER__RBAC=False
   - PYTHONPATH=/opt/airflow
-x-airflow-image: &airflow_image apache/airflow:2.0.0-python3.8
+x-airflow-image: &airflow_image airflow-custom:latest
 # ====================================== /AIRFLOW ENVIRONMENT VARIABLES ======================================
 services:
   postgres:
     image: postgres:12-alpine
-    environment:
-      - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
-      - POSTGRES_DB=airflow
+    env_file:
+      - .env
     ports:
-      - "5432:5432"
+      - "5433:5432"
   init:
     image: *airflow_image
     depends_on:
       - postgres
+    env_file:
+      - .env
     environment: *airflow_environment
     entrypoint: /bin/bash
     command: -c 'airflow db upgrade && sleep 5 && airflow users create --username admin --password admin --firstname Anonymous --lastname Admin --role Admin --email admin@example.org'
   webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: *airflow_image
     restart: always
     depends_on:
@@ -39,6 +42,8 @@ services:
       - ./dags:/opt/airflow/dags
       - ./include:/opt/airflow/include
       - logs:/opt/airflow/logs
+    env_file:
+      - .env
     environment: *airflow_environment
     command: webserver
   scheduler:
@@ -50,6 +55,8 @@ services:
       - ./dags:/opt/airflow/dags
       - ./include:/opt/airflow/include
       - logs:/opt/airflow/logs
+    env_file:
+      - .env
     environment: *airflow_environment
     command: scheduler
 

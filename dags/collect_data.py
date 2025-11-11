@@ -8,7 +8,10 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from include.tasks.collect_data import extract_data, transform_data, load_data
+from include.tasks.collect_data.extract_data import ExtractData
+from include.tasks.collect_data.load_data import load_data
+
+
 
 with DAG(
     'collect_data',
@@ -19,15 +22,10 @@ with DAG(
     tags=['etl', 'training', "machine_learning"],
 ) as dag:
 
+
     extract = PythonOperator(
         task_id='extract',
-        python_callable=extract_data,
-        provide_context=True,
-    )
-
-    transform = PythonOperator(
-        task_id='transform',
-        python_callable=transform_data,
+        python_callable=ExtractData().extract,
         provide_context=True,
     )
 
@@ -37,4 +35,4 @@ with DAG(
         provide_context=True,
     )
 
-    extract >> transform >> load
+    extract >> load

@@ -1,0 +1,14 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+BINANCE_API_KEY = os.getenv('BINANCE_API_KEY')
+BINANCE_SECRET = os.getenv('BINANCE_API_KEY')
+
+TEMP_DATA_GENERAL_PATH = 'temp_data/'
+
+POSTGRES_ETL_USER=os.getenv('POSTGRES_ETL_USER')
+POSTGRES_ETL_PASSWORD=os.getenv('POSTGRES_ETL_PASSWORD')
+POSTGRES_ETL_DB=os.getenv('POSTGRES_ETL_DB')
+POSTGRES_ETL_DB_HOST=os.getenv('POSTGRES_ETL_DB_HOST')
+POSTGRES_ETL_DB_PORT=os.getenv('POSTGRES_ETL_DB_PORT')

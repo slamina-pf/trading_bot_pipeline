@@ -21,22 +21,22 @@ with DAG(
     tags=['etl', 'training', "machine_learning", "xgboost"],
 ) as dag:
 
-    extract = PythonOperator(
+    select = PythonOperator(
         task_id='feature_selection',
         python_callable=feature_selection,
         provide_context=True,
     )
 
-    transform = PythonOperator(
+    tuning = PythonOperator(
         task_id='hyperparameter_tuning',
         python_callable=hyperparameter_tuning,
         provide_context=True,
     )
 
-    load = PythonOperator(
+    train = PythonOperator(
         task_id='xgboost_model',
         python_callable=xgboost_model,
         provide_context=True,
     )
 
-    extract >> transform >> load
+    select >> tuning >> train
