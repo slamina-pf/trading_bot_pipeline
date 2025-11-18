@@ -17,7 +17,13 @@ class BinanceConnection:
 
         return EXCHANGE
     
+class BinanceBasicConnection:
+    
+    def create_client(self):
+        
+        BASIC_EXCHANGE = ccxt.binance()
 
+        return BASIC_EXCHANGE
 class PostgresConnection:
     def __init__(self, user: str, password: str, host: str, port: int, database: str):
         self.user = user

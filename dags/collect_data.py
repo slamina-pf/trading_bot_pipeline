@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from include.tasks.collect_data.extract_data import ExtractData
 from include.tasks.collect_data.load_data import load_data
 
-
+extractor = ExtractData()
 
 with DAG(
     'collect_data',
@@ -25,7 +25,7 @@ with DAG(
 
     extract = PythonOperator(
         task_id='extract',
-        python_callable=ExtractData().extract,
+        python_callable=extractor.extract,
         provide_context=True,
     )
 
