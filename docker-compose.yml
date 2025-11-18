@@ -41,7 +41,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./include:/opt/airflow/include
-      - logs:/opt/airflow/logs
+      - ./logs:/opt/airflow/logs
     env_file:
       - .env
     environment: *airflow_environment
@@ -54,7 +54,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./include:/opt/airflow/include
-      - logs:/opt/airflow/logs
+      - ./logs:/opt/airflow/logs 
     env_file:
       - .env
     environment: *airflow_environment

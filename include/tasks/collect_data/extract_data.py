@@ -1,7 +1,7 @@
 import pandas as pd
 import time
 from datetime import datetime, timedelta, timezone
-from include.connections import BinanceConnection, PostgresConnection
+from include.connections import PostgresConnection, BinanceBasicConnection
 from include.constants import BINANCE_API_KEY, BINANCE_SECRET, TEMP_DATA_GENERAL_PATH, POSTGRES_ETL_USER, POSTGRES_ETL_PASSWORD, POSTGRES_ETL_DB, POSTGRES_ETL_DB_HOST, POSTGRES_ETL_DB_PORT
 import os
 
@@ -18,7 +18,7 @@ class ExtractData:
         - limit: max candles per request (ccxt/exchange limit)
         - data_storage_name: filename (without extension) used when saving parquet
         - start_date / end_date: computed UTC datetime window for extraction
-        - connection: ccxt exchange instance returned by [`BinanceConnection`](include/connections.py)
+        - connection: ccxt exchange instance returned by [`BinanceBasicConnection`](include/connections.py)
     """
     def __init__(
             self, 
@@ -35,7 +35,7 @@ class ExtractData:
         self.data_storage_name = data_storage_name
         self.end_date = datetime.now(timezone.utc)
         self.start_date = datetime.now(timezone.utc) - timedelta(days=self.days)
-        self.exchange = BinanceConnection(BINANCE_API_KEY, BINANCE_SECRET).create_client()
+        self.exchange = BinanceBasicConnection().create_client()
         self.etl_connection = PostgresConnection(POSTGRES_ETL_USER, POSTGRES_ETL_PASSWORD, POSTGRES_ETL_DB_HOST, int(POSTGRES_ETL_DB_PORT), POSTGRES_ETL_DB)
 
 
@@ -51,7 +51,8 @@ class ExtractData:
 
             The directory is created if it doesn't exist.
         """
-        os.makedirs(f'{TEMP_DATA_GENERAL_PATH}', exist_ok=True)
+        print(f'saving data in: {TEMP_DATA_GENERAL_PATH}/{self.data_storage_name}')
+        os.makedirs(TEMP_DATA_GENERAL_PATH, exist_ok=True)
         df.to_parquet(f'{TEMP_DATA_GENERAL_PATH}/{self.data_storage_name}.parquet', index=False)
 
 
@@ -72,25 +73,12 @@ class ExtractData:
             Returns:
                 list: concatenated raw candle lists from ccxt (each candle is [ts, open, high, low, close, volume]).
         """
-        # If start_date is None, fetch the first available candle
-        if start_date is None:
-            try:
-                # Fetch one candle without specifying 'since' → earliest available
-                first_candle = self.exchange.fetch_ohlcv(self.symbol, self.timeframe, limit=1)
-                if not first_candle:
-                    raise ValueError("No OHLCV data available for this symbol/timeframe.")
-                since = first_candle[0][0]  # Timestamp of the first candle
-            except Exception as e:
-                raise RuntimeError(f"Failed to fetch initial OHLCV data: {e}")
-        else:
-            since = self.to_milliseconds(start_date)
-
+        
+        since = self.exchange.parse8601('2017-01-01T00:00:00Z')
         end_timestamp = self.to_milliseconds(self.end_date)
         all_candles = []
-
         while since < end_timestamp:
             candles = self.exchange.fetch_ohlcv(self.symbol, self.timeframe, since, self.limit)
-
             if not candles:
                 break
 
@@ -101,7 +89,7 @@ class ExtractData:
 
             # Respect rate limits
             time.sleep(self.exchange.rateLimit / 1000)
-        
+        print("Total candles fetched: ", len(all_candles))
         return all_candles
     
 
@@ -115,8 +103,9 @@ class ExtractData:
             3. Convert timestamp column from ms to pandas datetime (UTC)
             4. Persist DataFrame using save_to_parquet()
         """
+        print("Starting data extraction fuck you")
         data = self.get_data()
-
+        print("final data: ", len(data))
         df = pd.DataFrame(
             data,
             columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
