@@ -1,5 +1,13 @@
 import ccxt
 import psycopg2
+from include.constants import POSTGRES_ETL_USER, POSTGRES_ETL_PASSWORD, POSTGRES_ETL_DB, POSTGRES_ETL_DB_HOST, POSTGRES_ETL_DB_PORT
+
+
+print("Postgres ETL User: ", POSTGRES_ETL_USER)
+print("Postgres ETL Password: ", POSTGRES_ETL_PASSWORD)
+print("Postgres ETL DB Host: ", POSTGRES_ETL_DB_HOST)
+print("Postgres ETL DB Port: ", POSTGRES_ETL_DB_PORT)
+print("Postgres ETL DB: ", POSTGRES_ETL_DB)
 class BinanceConnection:
     def __init__(self, api_key: str, api_secret: str):
         self.api_key = api_key
@@ -25,7 +33,14 @@ class BinanceBasicConnection:
 
         return BASIC_EXCHANGE
 class PostgresConnection:
-    def __init__(self, user: str, password: str, host: str, port: int, database: str):
+    def __init__(
+            self, 
+            user: str = POSTGRES_ETL_USER , 
+            password: str = POSTGRES_ETL_PASSWORD, 
+            host: str = POSTGRES_ETL_DB_HOST, 
+            port: int = int(POSTGRES_ETL_DB_PORT), 
+            database: str = POSTGRES_ETL_DB
+        ):
         self.user = user
         self.password = password
         self.host = host

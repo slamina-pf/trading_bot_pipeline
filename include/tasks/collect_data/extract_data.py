@@ -36,24 +36,7 @@ class ExtractData:
         self.end_date = datetime.now(timezone.utc)
         self.start_date = datetime.now(timezone.utc) - timedelta(days=self.days)
         self.exchange = BinanceBasicConnection().create_client()
-        self.etl_connection = PostgresConnection(POSTGRES_ETL_USER, POSTGRES_ETL_PASSWORD, POSTGRES_ETL_DB_HOST, int(POSTGRES_ETL_DB_PORT), POSTGRES_ETL_DB)
-
-
-    def get_start_date(self):
-        con = self.etl_connection.get_connection_string()
-        cur = con.cursor()
-        cur.execute("SELECT name, duration FROM timeframe ORDER BY name;")
-        rows = cur.fetchall()
-
-    def save_to_parquet(self, df):
-        """
-            Persist a pandas DataFrame to parquet under TEMP_DATA_GENERAL_PATH.
-
-            The directory is created if it doesn't exist.
-        """
-        print(f'saving data in: {TEMP_DATA_GENERAL_PATH}/{self.data_storage_name}')
-        os.makedirs(TEMP_DATA_GENERAL_PATH, exist_ok=True)
-        df.to_parquet(f'{TEMP_DATA_GENERAL_PATH}/{self.data_storage_name}.parquet', index=False)
+        self.etl_connection = PostgresConnection().get_connection_string()
 
 
     def to_milliseconds(self, dt):
@@ -63,6 +46,18 @@ class ExtractData:
         """
         return int(dt.timestamp() * 1000)
     
+
+    def get_start_date(self):
+        con = self.etl_connection.get_connection_string()
+        cur = con.cursor()
+        cur.execute("SELECT name, duration FROM timeframe ORDER BY name;")
+        rows = cur.fetchall()
+
+    def save(self, df):
+        cur = self.etl_connection.cursor()
+        cur.execute("SELECT * FROM financial_market limit 1;")
+        rows = cur.fetchall()
+        print("rows: ", rows)
 
     def get_data(self, start_date: datetime = None) -> list:
         """
@@ -106,11 +101,8 @@ class ExtractData:
         print("Starting data extraction fuck you")
         data = self.get_data()
         print("final data: ", len(data))
-        df = pd.DataFrame(
+        self.save(data)
+        """ df = pd.DataFrame(
             data,
             columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-        )
-
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-
-        self.save_to_parquet(df)
+        ) """
