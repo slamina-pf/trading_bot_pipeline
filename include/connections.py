@@ -1,7 +1,6 @@
 import ccxt
-import psycopg2
 from include.constants import POSTGRES_ETL_USER, POSTGRES_ETL_PASSWORD, POSTGRES_ETL_DB, POSTGRES_ETL_DB_HOST, POSTGRES_ETL_DB_PORT
-
+from sqlalchemy import create_engine
 
 print("Postgres ETL User: ", POSTGRES_ETL_USER)
 print("Postgres ETL Password: ", POSTGRES_ETL_PASSWORD)
@@ -47,12 +46,9 @@ class PostgresConnection:
         self.port = port
         self.database = database
 
-    def get_connection_string(self) -> str:
-        con = psycopg2.connect(
-            host=self.host,
-            port=self.port,
-            dbname=self.database,
-            user=self.user,
-            password=self.password
+    def get_engine(self):
+        url = (
+            f"postgresql+psycopg2://{self.user}:{self.password}"
+            f"@{self.host}:{self.port}/{self.database}"
         )
-        return con
+        return create_engine(url)
