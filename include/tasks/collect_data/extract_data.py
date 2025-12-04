@@ -2,8 +2,9 @@ import pandas as pd
 import time
 from datetime import datetime, timedelta, timezone
 from include.connections import PostgresConnection, BinanceBasicConnection
-from include.constants import BINANCE_API_KEY, BINANCE_SECRET, TEMP_DATA_GENERAL_PATH, POSTGRES_ETL_USER, POSTGRES_ETL_PASSWORD, POSTGRES_ETL_DB, POSTGRES_ETL_DB_HOST, POSTGRES_ETL_DB_PORT
+from include.constants import TEMP_DATA_GENERAL_PATH
 import os
+from sqlalchemy import text
 
 # Module-level: utilities to extract OHLCV data from Binance via ccxt.
 # The main entrypoint in this module is the ExtractData class below
@@ -36,7 +37,7 @@ class ExtractData:
         self.end_date = datetime.now(timezone.utc)
         self.start_date = datetime.now(timezone.utc) - timedelta(days=self.days)
         self.exchange = BinanceBasicConnection().create_client()
-        self.etl_connection = PostgresConnection().get_connection_string()
+        self.etl_connection = PostgresConnection().get_engine()
 
 
     def to_milliseconds(self, dt):
@@ -47,17 +48,39 @@ class ExtractData:
         return int(dt.timestamp() * 1000)
     
 
-    def get_start_date(self):
+    """ def get_start_date(self):
         con = self.etl_connection.get_connection_string()
         cur = con.cursor()
         cur.execute("SELECT name, duration FROM timeframe ORDER BY name;")
-        rows = cur.fetchall()
+        rows = cur.fetchall() """
 
-    def save(self, df):
-        cur = self.etl_connection.cursor()
-        cur.execute("SELECT * FROM financial_market limit 1;")
-        rows = cur.fetchall()
-        print("rows: ", rows)
+    def add_symbol_and_timeframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        engine = self.etl_connection   
+
+        with engine.connect() as conn:
+            symbol_id = conn.execute(
+                text("SELECT id FROM symbol WHERE symbol = :symbol"),
+                {"symbol": self.symbol}
+            ).scalar()
+
+            timeframe_id = conn.execute(
+                text("SELECT id FROM timeframe WHERE name = :timeframe"),
+                {"timeframe": self.timeframe}
+            ).scalar()
+        print("Symbol ID: ", symbol_id)
+        print("Timeframe ID: ", timeframe_id)
+        df["symbol_id"] = symbol_id
+        df["timeframe_id"] = timeframe_id
+        return df
+
+    def load_data(self, df):
+        os.makedirs(TEMP_DATA_GENERAL_PATH, exist_ok=True)
+        temp_path = os.path.join(TEMP_DATA_GENERAL_PATH, f"{self.data_storage_name}.parquet")
+
+        os.makedirs(TEMP_DATA_GENERAL_PATH, exist_ok=True)
+
+        df.to_parquet(temp_path, index=False)
+        print(f"Data saved to {temp_path}")
 
     def get_data(self, start_date: datetime = None) -> list:
         """
@@ -101,8 +124,6 @@ class ExtractData:
         print("Starting data extraction fuck you")
         data = self.get_data()
         print("final data: ", len(data))
-        self.save(data)
-        """ df = pd.DataFrame(
-            data,
-            columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-        ) """
+        df = pd.DataFrame(data,columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'] )
+        df = self.add_symbol_and_timeframe(df)
+        self.load_data(df)

@@ -1,17 +1,16 @@
 import json
 import pathlib
-
 import airflow.utils.dates
 import requests
 import requests.exceptions as requests_exceptions
 from airflow import DAG
-from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 from include.tasks.collect_data.extract_data import ExtractData
-from include.tasks.collect_data.load_data import load_data
+from include.tasks.collect_data.load_data import LoadData
 
 extractor = ExtractData()
+loader = LoadData()
 
 with DAG(
     'collect_data',
@@ -31,7 +30,7 @@ with DAG(
 
     load = PythonOperator(
         task_id='load',
-        python_callable=load_data,
+        python_callable=loader.save,
         provide_context=True,
     )
 
