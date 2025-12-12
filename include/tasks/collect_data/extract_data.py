@@ -67,8 +67,7 @@ class ExtractData:
                 text("SELECT id FROM timeframe WHERE name = :timeframe"),
                 {"timeframe": self.timeframe}
             ).scalar()
-        print("Symbol ID: ", symbol_id)
-        print("Timeframe ID: ", timeframe_id)
+        
         df["symbol_id"] = symbol_id
         df["timeframe_id"] = timeframe_id
         return df
@@ -80,7 +79,7 @@ class ExtractData:
         os.makedirs(TEMP_DATA_GENERAL_PATH, exist_ok=True)
 
         df.to_parquet(temp_path, index=False)
-        print(f"Data saved to {temp_path}")
+        
 
     def get_data(self, start_date: datetime = None) -> list:
         """
@@ -92,7 +91,15 @@ class ExtractData:
                 list: concatenated raw candle lists from ccxt (each candle is [ts, open, high, low, close, volume]).
         """
         
-        since = self.exchange.parse8601('2017-01-01T00:00:00Z')
+        engine = self.etl_connection   
+
+        with engine.connect() as conn:
+            last_date = conn.execute(
+                text("SELECT timestamp FROM market_ochlv ORDER BY timestamp DESC limit 1; ")
+            ).scalar()
+        
+        since = self.to_milliseconds(last_date)
+        print("Default since: ", since)
         end_timestamp = self.to_milliseconds(self.end_date)
         all_candles = []
         while since < end_timestamp:
@@ -108,7 +115,8 @@ class ExtractData:
             # Respect rate limits
             time.sleep(self.exchange.rateLimit / 1000)
         print("Total candles fetched: ", len(all_candles))
-        return all_candles
+        clean_candles = all_candles[1:-1]
+        return clean_candles
     
 
     def extract(self):
@@ -121,9 +129,9 @@ class ExtractData:
             3. Convert timestamp column from ms to pandas datetime (UTC)
             4. Persist DataFrame using save_to_parquet()
         """
-        print("Starting data extraction fuck you")
+        
         data = self.get_data()
-        print("final data: ", len(data))
+        
         df = pd.DataFrame(data,columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'] )
         df = self.add_symbol_and_timeframe(df)
         self.load_data(df)
